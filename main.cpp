@@ -11,6 +11,7 @@ main (int argc, char* argv[])
     grammar_type scanner;
 
     std::locale::global (std::locale (""));
+    std::wcin.imbue (std::locale (""));
     std::wcout.imbue (std::locale (""));
     std::wstring progname = editor_type::decode (argv[0]);
     if (argc == 2) {
