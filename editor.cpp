@@ -180,15 +180,7 @@ int
 editor_type::cmd_j (command_type& ct)
 {
     std::wstring sep;
-    std::wstring::const_iterator i;
-    for (i = ct.param.cbegin (); i < ct.param.cend (); ++i)
-        if ('\\' == *i && i + 1 < ct.param.cend ()) {
-            int c = *++i;
-            c = 'n' == c ? '\n' : 't' == c ? '\t' : c;
-            sep.push_back (c);
-        }
-        else
-            sep.push_back (*i);
+    unquote (ct.param, sep);
     std::wstring doc;
     for (std::size_t line = line1; line <= line2; ++line) {
         if (line > line1)
@@ -498,6 +490,20 @@ editor_type::substhere (
         }
         else
             doc.push_back (*i);
+}
+
+void
+editor_type::unquote (std::wstring const& src, std::wstring& dst)
+{
+    std::wstring::const_iterator i;
+    for (i = src.cbegin (); i < src.cend (); ++i)
+        if ('\\' == *i && i + 1 < src.cend ()) {
+            int c = *++i;
+            c = 'n' == c ? '\n' : 't' == c ? '\t' : c;
+            dst.push_back (c);
+        }
+        else
+            dst.push_back (*i);
 }
 
 std::wstring

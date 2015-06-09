@@ -67,6 +67,7 @@ class editor_type {
 public:
     editor_type (grammar_type& sc, buffer_type& b);
     int edit (std::wstring::const_iterator s);
+    static void unquote (std::wstring const& src, std::wstring& dst);
     static std::wstring decode (std::string octets, char const* const lname = "");
     static std::string encode (std::wstring str, char const* lname = "");
 
