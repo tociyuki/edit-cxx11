@@ -179,10 +179,20 @@ editor_type::cmd_i (command_type& ct)
 int
 editor_type::cmd_j (command_type& ct)
 {
+    std::wstring sep;
+    std::wstring::const_iterator i;
+    for (i = ct.param.cbegin (); i < ct.param.cend (); ++i)
+        if ('\\' == *i && i + 1 < ct.param.cend ()) {
+            int c = *++i;
+            c = 'n' == c ? '\n' : 't' == c ? '\t' : c;
+            sep.push_back (c);
+        }
+        else
+            sep.push_back (*i);
     std::wstring doc;
     for (std::size_t line = line1; line <= line2; ++line) {
         if (line > line1)
-            doc.append (ct.param);
+            doc.append (sep);
         std::wstring::const_iterator s, e;
         buffer.get (line, s, e);
         if (s < e && '\n' == e[-1])
