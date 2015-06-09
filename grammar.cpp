@@ -143,15 +143,8 @@ grammar_type::getparam (std::wstring::const_iterator& s, command_type& ct)
     if (paramfirst.find (*s) == std::wstring::npos)
         return true;
     std::wstring::const_iterator s1 = s;
-    if ((s = skippattern (s1)) != s1) {
-        for (++s1; s1 < s - 1; ++s1)
-            if ('\\' == *s1 && s1 + 1 < s - 1) {
-                int c = *++s1;
-                ct.param.push_back ('n' == c ? '\n' : 't' == c ? '\t' : c);
-            }
-            else
-                ct.param.push_back (*s1);
-    }
+    if ((s = skippattern (s1)) != s1)
+        ct.param.assign (s1 + 1, s - 1);
     return true;
 }
 
