@@ -47,7 +47,7 @@ regexp_type::execute (std::wstring::const_iterator s,
         for (rethread_type const& th : run) {
             recode_type& re = program[th.ip];
             if (ANY == re.op) {
-                if (s < eos)
+                if (s < eos && '\n' != *s)
                     addthread (rdy, {th.ip + 1, th.cap}, s + 1);
             }
             else if (CCLASS == re.op || NCCLASS == re.op) {

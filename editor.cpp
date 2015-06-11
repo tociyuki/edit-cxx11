@@ -20,16 +20,23 @@ editor_type::edit (std::wstring::const_iterator s)
     default:
         if ('?' == evalrange (ct))
             return '?';
-        return command (ct);
+        if ('?' == command (ct))
+            return '?';
+        buffer.touch ();
+        break;
     case 'g':
     case 'v':
-        return global (s, ct);
+        if ('?' == global (s, ct))
+            return '?';
+        buffer.touch ();
+        break;
     case 'q':
         return ct.command;
     case 'u':
         buffer.undo ();
         return ct.command;
     }
+    return ct.command;
 }
 
 int
@@ -116,7 +123,6 @@ editor_type::cmd_a (command_type& ct)
 {
     getdoc (ct.param);
     buffer.append (line2, ct.param);
-    buffer.touch ();
     return ct.command;
 }
 
@@ -125,7 +131,6 @@ editor_type::cmd_c (command_type& ct)
 {
     getdoc (ct.param);
     buffer.change (line1, line2, ct.param);
-    buffer.touch ();
     return ct.command;
 }
 
@@ -133,7 +138,6 @@ int
 editor_type::cmd_d (command_type& ct)
 {
     buffer.erase (line1, line2);
-    buffer.touch ();
     return ct.command;
 }
 
@@ -144,11 +148,9 @@ editor_type::cmd_e (command_type& ct)
     buffer.setfile (ct.param);
     if (read (buffer.file (), doc)) {
         buffer.change (1, buffer.dollar (), doc);
-        buffer.touch ();
     }
     else {
         buffer.erase (1, buffer.dollar ());
-        buffer.touch ();
         if (! buffer.file ().empty ()) {
             std::wcout << L"cannot read file '" << buffer.file () << "'\n";
             return '?';
@@ -172,7 +174,6 @@ editor_type::cmd_i (command_type& ct)
 {
     getdoc (ct.param);
     buffer.append (line2 - 1, ct.param);
-    buffer.touch ();
     return ct.command;
 }
 
@@ -193,7 +194,6 @@ editor_type::cmd_j (command_type& ct)
     }
     doc.push_back ('\n');
     buffer.change (line1, line2, doc);
-    buffer.touch ();
     return ct.command;
 }
 
@@ -216,7 +216,6 @@ editor_type::cmd_m (command_type& ct)
         buffer.setdot (line3);
     else
         buffer.setdot (line3 + (line2 - line1 + 1));
-    buffer.touch ();
     return ct.command;
 }
 
@@ -268,7 +267,6 @@ editor_type::cmd_r (command_type& ct)
         ct.param = buffer.file ();
     if (read (ct.param, doc)) {
         buffer.append (line2, doc);
-        buffer.touch ();
     }
     else {
         return '?';
@@ -286,7 +284,6 @@ editor_type::cmd_s (command_type& ct)
         substitute (ct.pattern, ct.param, ct.gflag, s, e, doc);
     }
     buffer.change (line1, line2, doc);
-    buffer.touch ();
     return ct.command;
 }
 
@@ -304,7 +301,6 @@ editor_type::cmd_t (command_type& ct)
         doc.append (s, e);
     }
     buffer.append (line3, doc);
-    buffer.touch ();
     return ct.command;
 }
 
@@ -465,7 +461,7 @@ editor_type::substitute (std::wstring const& pattern,
         return;
     std::wstring::const_iterator s3 = s;
     while (s3 < eos) {
-        if (re.execute (s3, bos, eos, cap)) {
+        if ('\n' != *s3 && re.execute (s3, bos, eos, cap)) {
             substhere (bos, replacement, cap, doc);
             s3 = bos + cap[1];
             if (! gflag)
