@@ -436,7 +436,7 @@ editor_type::match (regexp_type& re,
         ++s;
         if (re.execute (s, bos, eos, cap))
             return true;
-    } while (s < eos);
+    } while (s < eos && '\n' != *s);
     return false;
 }
 
