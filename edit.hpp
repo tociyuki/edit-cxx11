@@ -99,6 +99,7 @@ private:
     bool read (std::wstring const& file, std::wstring& doc);
     bool write (std::wstring const& file);
     void getdoc (std::wstring& doc);
+    bool evalrange (command_type const& ct);
     bool evaladdr (std::vector<addr_type> const& addr, std::size_t& line);
     int find (int n, int way, std::wstring const& pattern);
     bool match (regexp_type& re,

@@ -18,7 +18,7 @@ editor_type::edit (std::wstring::const_iterator s)
         return '?';
     switch (ct.command) {
     default:
-        if (! evaladdr (ct.addr1, line1) || ! evaladdr (ct.addr2, line2))
+        if ('?' == evalrange (ct))
             return '?';
         return command (ct);
     case 'g':
@@ -102,7 +102,7 @@ editor_type::sweepglobal (command_type& ct)
             buffer.setdot (line);
             if (ct.naddr == 0)
                 line1 = line2 = line;
-            else if (! evaladdr (ct.addr1, line1) || ! evaladdr (ct.addr2, line2))
+            else if ('?' == evalrange (ct))
                 return '?';
             if ('?' == command (ct))
                 return '?';
@@ -373,6 +373,18 @@ editor_type::getdoc (std::wstring& doc)
             break;
         doc += s + L"\n";
     }
+}
+
+bool
+editor_type::evalrange (command_type const& ct)
+{
+    if (! evaladdr (ct.addr1, line1))
+        return '?';
+    if (';' == ct.comma)
+        buffer.setdot (line1);
+    if (! evaladdr (ct.addr2, line2))
+        return '?';
+    return ct.command;
 }
 
 bool
