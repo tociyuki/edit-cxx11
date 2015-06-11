@@ -212,10 +212,6 @@ editor_type::cmd_m (command_type& ct)
             || (line1 <= line3 && line3 <= line2))
         return '?';
     buffer.move (line1, line2, line3);
-    if (line3 > line1)
-        buffer.setdot (line3);
-    else
-        buffer.setdot (line3 + (line2 - line1 + 1));
     return ct.command;
 }
 

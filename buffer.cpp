@@ -139,12 +139,14 @@ buffer_type::move (std::size_t line1, std::size_t line2, std::size_t line3)
         history.push_back ({APPEND, seq, cur, line3 + 1, line3 + n, {}});
         text.erase (text.begin () + line1, text.begin () + line2 + 1);
         text.insert (text.begin () + line3 + 1, a.begin (), a.end ());
+        cur = line3 + (line2 - line1 + 1);
     }
     else {
         history.push_back ({APPEND, seq, cur, line3 + 1, line3 + n, {}});
         history.push_back ({ERASE, seq, cur, line1, line2, a});
         text.insert (text.begin () + line3 + 1, a.begin (), a.end ());
         text.erase (text.begin () + line1, text.begin () + line2 + 1);
+        cur = line3;
     }
     return cur;
 }
