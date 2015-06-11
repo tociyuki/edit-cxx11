@@ -1,3 +1,4 @@
+#include <iostream>
 #include <string>
 #include <vector>
 #include <memory>
@@ -81,7 +82,7 @@ regexp_type::addthread (std::vector<rethread_type>& q, rethread_type&& th,
         q.push_back (std::move (th));
         break;
     case BOL:
-        if (s - 1 >= bos || '\n' == s[-1])
+        if (s <= bos || (s - 1 >= bos && '\n' == s[-1]))
             addthread (q, {th.ip + 1, th.cap}, s);
         break;
     case EOL:
