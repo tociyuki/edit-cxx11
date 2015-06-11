@@ -265,12 +265,10 @@ editor_type::cmd_r (command_type& ct)
         buffer.setfile (ct.param);
     if (ct.param.empty ())
         ct.param = buffer.file ();
-    if (read (ct.param, doc)) {
+    if (read (ct.param, doc))
         buffer.append (line2, doc);
-    }
-    else {
+    else
         return '?';
-    }
     return ct.command;
 }
 
@@ -281,7 +279,10 @@ editor_type::cmd_s (command_type& ct)
     for (std::size_t line = line1; line <= line2; ++line) {
         std::wstring::const_iterator s, e;
         buffer.get (line, s, e);
+        if (s < e && '\n' == e[-1])
+            --e;
         substitute (ct.pattern, ct.param, ct.gflag, s, e, doc);
+        doc.push_back ('\n');
     }
     buffer.change (line1, line2, doc);
     return ct.command;
@@ -460,14 +461,14 @@ editor_type::substitute (std::wstring const& pattern,
     if (! re.compile (pattern))
         return;
     std::wstring::const_iterator s3 = s;
-    while (s3 < eos) {
-        if ('\n' != *s3 && re.execute (s3, bos, eos, cap)) {
-            substhere (bos, replacement, cap, doc);
+    while (s3 <= eos) {
+        if (re.execute (s3, bos, eos, cap)) {
+            substhere (s3, replacement, cap, doc);
             s3 = bos + cap[1];
             if (! gflag)
                 break;
         }
-        else
+        else if (s3 < eos)
             doc.push_back (*s3++);
     }
     if (s3 < eos)
