@@ -279,9 +279,7 @@ editor_type::cmd_s (command_type& ct)
     for (std::size_t line = line1; line <= line2; ++line) {
         std::wstring::const_iterator s, e;
         buffer.get (line, s, e);
-        chomp_bang (s, e);
         substitute (ct.pattern, ct.param, ct.gflag, s, e, doc);
-        doc.push_back ('\n');
     }
     buffer.change (line1, line2, doc);
     return ct.command;
@@ -463,6 +461,9 @@ editor_type::substitute (std::wstring const& pattern,
     std::wstring::const_iterator const bos = s;
     if (! re.compile (pattern))
         return;
+    int hasnewline = (bos < eos && '\n' == eos[-1]);
+    if (hasnewline)
+        --eos;
     std::wstring::const_iterator s3 = s;
     while (s3 <= eos) {
         if (re.execute (s3, bos, eos, cap)) {
@@ -473,9 +474,13 @@ editor_type::substitute (std::wstring const& pattern,
         }
         else if (s3 < eos)
             doc.push_back (*s3++);
+        if (s3 >= eos)
+            break;
     }
     if (s3 < eos)
         doc.append (s3, eos);
+    if (hasnewline)
+        doc.push_back ('\n');
 }
 
 void
