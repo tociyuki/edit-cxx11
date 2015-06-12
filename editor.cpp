@@ -91,6 +91,8 @@ editor_type::markglobal (command_type& ct)
 {
     if (! evaladdr (ct.addr1, line1) || ! evaladdr (ct.addr2, line2))
         return '?';
+    if (line1 <= 0 || line1 > line2 || buffer.dollar () < line1 || buffer.dollar () < line2)
+        return '?';
     regexp_type re;
     re.compile (ct.pattern);
     for (std::size_t line = 1; line <= buffer.dollar (); ++line) {
