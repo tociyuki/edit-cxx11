@@ -222,8 +222,7 @@ editor_type::cmd_m (command_type& ct)
 int
 editor_type::cmd_n (command_type& ct)
 {
-    std::size_t line = std::max (line1, 1U);
-    for (; line <= line2; ++line) {
+    for (std::size_t line = line1; line <= line2; ++line) {
         std::wstring::const_iterator s, e;
         buffer.get (line, s, e);
         std::wcout << std::setw (7) << line << L" ";
@@ -237,8 +236,7 @@ editor_type::cmd_n (command_type& ct)
 int
 editor_type::cmd_p (command_type& ct)
 {
-    std::size_t line = std::max (line1, 1U);
-    for (; line <= line2; ++line) {
+    for (std::size_t line = line1; line <= line2; ++line) {
         std::wstring::const_iterator s, e;
         buffer.get (line, s, e);
         for (; s < e; ++s)
