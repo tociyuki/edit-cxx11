@@ -68,6 +68,8 @@ public:
     editor_type (grammar_type& sc, buffer_type& b);
     int edit (std::wstring::const_iterator s);
     static void unquote (std::wstring const& src, std::wstring& dst);
+    static void chomp_bang (std::wstring::const_iterator const bos,
+        std::wstring::const_iterator& eos);
     static std::wstring decode (std::string octets, char const* const lname = "");
     static std::string encode (std::wstring str, char const* lname = "");
 
@@ -103,7 +105,7 @@ private:
     bool evaladdr (std::vector<addr_type> const& addr, std::size_t& line);
     int find (int n, int way, std::wstring const& pattern);
     bool match (regexp_type& re,
-        std::wstring::const_iterator s, std::wstring::const_iterator const eos);
+        std::wstring::const_iterator s, std::wstring::const_iterator eos);
     void substitute (std::wstring const& pattern,
         std::wstring const& replacement, bool gflag, 
         std::wstring::const_iterator s0, std::wstring::const_iterator e,

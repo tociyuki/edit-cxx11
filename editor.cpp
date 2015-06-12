@@ -188,8 +188,7 @@ editor_type::cmd_j (command_type& ct)
             doc.append (sep);
         std::wstring::const_iterator s, e;
         buffer.get (line, s, e);
-        if (s < e && '\n' == e[-1])
-            --e;
+        chomp_bang (s, e);
         doc.append (s, e);
     }
     doc.push_back ('\n');
@@ -275,8 +274,7 @@ editor_type::cmd_s (command_type& ct)
     for (std::size_t line = line1; line <= line2; ++line) {
         std::wstring::const_iterator s, e;
         buffer.get (line, s, e);
-        if (s < e && '\n' == e[-1])
-            --e;
+        chomp_bang (s, e);
         substitute (ct.pattern, ct.param, ct.gflag, s, e, doc);
         doc.push_back ('\n');
     }
@@ -415,33 +413,46 @@ editor_type::evaladdr (std::vector<addr_type> const& addr, std::size_t& line)
 }
 
 int
-editor_type::find (int n, int way, std::wstring const& pattern)
+editor_type::find (int line, int way, std::wstring const& pattern)
 {
     regexp_type re;
     re.compile (pattern);
-    int n1 = (n + way - 1) % buffer.dollar () + 1;
-    while (n1 != n) {
+    int dol = buffer.dollar ();
+    if (0 == dol)
+        return line;
+    else if (1 == dol && 1 == line)
+        return line;
+    else if (1 == dol) {
+        int line1 = dol;
         std::wstring::const_iterator s, e;
-        buffer.get (n1, s, e);
+        buffer.get (line1, s, e);
         if (match (re, s, e))
-            return n1;
-        n1 = (n1 + way - 1) % buffer.dollar () + 1;
+            return line1;
     }
-    return n;
+    else {
+        int line1 = (line + way - 1) % buffer.dollar () + 1;
+        while (line1 != line) {
+            std::wstring::const_iterator s, e;
+            buffer.get (line1, s, e);
+            if (match (re, s, e))
+                return line1;
+            line1 = (line1 + way - 1) % buffer.dollar () + 1;
+        }
+    }
+    return line;
 }
 
 bool
 editor_type::match (regexp_type& re,
-    std::wstring::const_iterator s, std::wstring::const_iterator const eos)
+    std::wstring::const_iterator s, std::wstring::const_iterator eos)
 {
     std::vector<std::size_t> cap;
     std::wstring::const_iterator const bos = s;
-    --s;
-    do {
-        ++s;
+    chomp_bang (bos, eos);
+    for (; s <= eos; ++s) {
         if (re.execute (s, bos, eos, cap))
             return true;
-    } while (s < eos && '\n' != *s);
+    }
     return false;
 }
 
@@ -495,6 +506,14 @@ editor_type::substhere (
         }
         else
             doc.push_back (*i);
+}
+
+void
+editor_type::chomp_bang (
+    std::wstring::const_iterator const bos, std::wstring::const_iterator& eos)
+{
+    if (bos < eos && '\n' == eos[-1])
+        --eos;
 }
 
 void
