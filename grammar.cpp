@@ -201,8 +201,10 @@ grammar_type::getlist (std::wstring::const_iterator& s, command_type& ct)
     ct.comma = ' ';
     ct.addr2.clear ();
     s = skipspace (s);
-    if (',' == *s || ';' == *s)
+    if (',' == *s)
         ct.addr1.push_back ({LINENUM, 1, L""});
+    else if (';' == *s)
+        ct.addr1.push_back ({DOT, 0, L""});
     else if (! isaddrfirst (*s))
         return true;
     else if (! getaddr (s, ct.addr1))
