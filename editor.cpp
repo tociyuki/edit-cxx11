@@ -42,28 +42,33 @@ editor_type::edit (std::wstring::const_iterator s)
 int
 editor_type::command (command_type& ct)
 {
+    static const std::wstring onemore (L"cdijkmnpstw"); 
     std::wstring doc;
     if (1 == ct.naddr)
         line2 = line1;
+    if (line1 < 0 || line1 > line2 || buffer.dollar () < line1 || buffer.dollar () < line2)
+        return '?';
+    if (line1 == 0 && onemore.find (ct.command) != std::wstring::npos)
+        return '?';
     switch (ct.command) {
     default: return '?';
-    case 'a': cmd_a (ct); break;
-    case 'c': cmd_c (ct); break;
-    case 'd': cmd_d (ct); break;
-    case 'e': cmd_e (ct); break;
-    case 'f': cmd_f (ct); break;
-    case 'i': cmd_i (ct); break;
-    case 'j': cmd_j (ct); break;
-    case 'k': cmd_k (ct); break;
-    case 'm': cmd_m (ct); break;
-    case 'n': cmd_n (ct); break;
-    case 'p': cmd_p (ct); break;
-    case 'r': cmd_r (ct); break;
-    case 's': cmd_s (ct); break;
-    case 't': cmd_t (ct); break;
-    case 'w': cmd_w (ct); break;
-    case '=': cmd_equal (ct); break;
-    case '\n': cmd_p (ct); break;
+    case 'a': ct.command = cmd_a (ct); break;
+    case 'c': ct.command = cmd_c (ct); break;
+    case 'd': ct.command = cmd_d (ct); break;
+    case 'e': ct.command = cmd_e (ct); break;
+    case 'f': ct.command = cmd_f (ct); break;
+    case 'i': ct.command = cmd_i (ct); break;
+    case 'j': ct.command = cmd_j (ct); break;
+    case 'k': ct.command = cmd_k (ct); break;
+    case 'm': ct.command = cmd_m (ct); break;
+    case 'n': ct.command = cmd_n (ct); break;
+    case 'p': ct.command = cmd_p (ct); break;
+    case 'r': ct.command = cmd_r (ct); break;
+    case 's': ct.command = cmd_s (ct); break;
+    case 't': ct.command = cmd_t (ct); break;
+    case 'w': ct.command = cmd_w (ct); break;
+    case '=': ct.command = cmd_equal (ct); break;
+    case '\n': ct.command = cmd_p (ct); break;
     }
     print_dot (ct);
     return ct.command;
@@ -207,7 +212,7 @@ int
 editor_type::cmd_m (command_type& ct)
 {
     if (! evaladdr (ct.addr3, line3)
-            || line1 < 1 || line3 > buffer.dollar ()
+            || line3 > buffer.dollar ()
             || (line1 <= line3 && line3 <= line2))
         return '?';
     buffer.move (line1, line2, line3);
@@ -217,7 +222,8 @@ editor_type::cmd_m (command_type& ct)
 int
 editor_type::cmd_n (command_type& ct)
 {
-    for (std::size_t line = line1; line <= line2; ++line) {
+    std::size_t line = std::max (line1, 1U);
+    for (; line <= line2; ++line) {
         std::wstring::const_iterator s, e;
         buffer.get (line, s, e);
         std::wcout << std::setw (7) << line << L" ";
@@ -231,7 +237,8 @@ editor_type::cmd_n (command_type& ct)
 int
 editor_type::cmd_p (command_type& ct)
 {
-    for (std::size_t line = line1; line <= line2; ++line) {
+    std::size_t line = std::max (line1, 1U);
+    for (; line <= line2; ++line) {
         std::wstring::const_iterator s, e;
         buffer.get (line, s, e);
         for (; s < e; ++s)
@@ -244,9 +251,9 @@ editor_type::cmd_p (command_type& ct)
 void
 editor_type::print_dot (command_type& ct)
 {
-    if (ct.pflag && buffer.dot () > 0) {
+    if ('?' != ct.command && ct.pflag && buffer.dot () > 0) {
         std::wstring::const_iterator s, e;
-        buffer.get (std::max (buffer.dot (), 1U), s, e);
+        buffer.get (buffer.dot (), s, e);
         for (; s < e; ++s)
             std::wcout.put (*s);
     }
@@ -286,7 +293,7 @@ int
 editor_type::cmd_t (command_type& ct)
 {
     if (! evaladdr (ct.addr3, line3)
-            || line1 < 1 || line3 > buffer.dollar ()
+            || line3 > buffer.dollar ()
             || (line1 <= line3 && line3 <= line2))
         return '?';
     std::wstring doc;
@@ -315,6 +322,7 @@ int
 editor_type::cmd_equal (command_type& ct)
 {
     std::wcout << line2 << std::endl;
+    buffer.setdot (line2);
     return ct.command;
 }
 
@@ -387,7 +395,7 @@ editor_type::evaladdr (std::vector<addr_type> const& addr, std::size_t& line)
         for (addr_type const& x: addr)
             switch (x.type) {
             case LINENUM:
-                n = x.disp < 1 ? 0 : (x.disp - 1) % buffer.dollar () + 1;
+                n = x.disp;
                 break;
             case LINEOFFSET:
                 n = (n + x.disp - 1) % buffer.dollar () + 1;
@@ -420,24 +428,14 @@ editor_type::find (int line, int way, std::wstring const& pattern)
     int dol = buffer.dollar ();
     if (0 == dol)
         return line;
-    else if (1 == dol && 1 == line)
-        return line;
-    else if (1 == dol) {
-        int line1 = dol;
+    for (int i = 0; i < dol; ++i) {
+        int xline = (line + way * (i + 1)) % (dol + 1);
+        if (0 == xline)
+            continue;
         std::wstring::const_iterator s, e;
-        buffer.get (line1, s, e);
+        buffer.get (xline, s, e);
         if (match (re, s, e))
-            return line1;
-    }
-    else {
-        int line1 = (line + way - 1) % buffer.dollar () + 1;
-        while (line1 != line) {
-            std::wstring::const_iterator s, e;
-            buffer.get (line1, s, e);
-            if (match (re, s, e))
-                return line1;
-            line1 = (line1 + way - 1) % buffer.dollar () + 1;
-        }
+            return xline;
     }
     return line;
 }
