@@ -197,7 +197,7 @@ regexp_type::term (std::vector<recode_type>& code)
     int k1 = 1, k2 = 1;
     if (re < eor && ('?' == *re || '*' == *re || '+' == *re)) {
         k1 = '+' == *re ? 1 : 0;
-        k2 = '?' == *re ? 0 : -1;
+        k2 = '?' == *re ? 1 : -1;
         ++re;
     }
     int n1 = code1.size ();
