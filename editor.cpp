@@ -467,17 +467,17 @@ editor_type::substitute (std::wstring const& pattern,
     if (hasnewline)
         --eos;
     std::wstring::const_iterator s3 = s;
-    while (s3 <= eos) {
+    for (; s3 <= eos; ++s3) {
         if (re.execute (s3, bos, eos, cap)) {
             substhere (s3, replacement, cap, doc);
             s3 = bos + cap[1];
             if (! gflag)
                 break;
+            --s3;
         }
-        else if (s3 < eos)
-            doc.push_back (*s3++);
-        if (s3 >= eos)
-            break;
+        else if (s3 < eos) {
+            doc.push_back (*s3);
+        }
     }
     if (s3 < eos)
         doc.append (s3, eos);
