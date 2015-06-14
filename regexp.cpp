@@ -290,7 +290,7 @@ regexp_type::clschar (std::wstring& str)
     else if (esc && 'w' == c)
         str.append (L"\\0-\\9\\a-\\z\\A-\\Z\\_");
     else if (esc && 'W' == c)
-        str.append (L"\\\t\\ -\\/\\:-\\@\\[-\\]\\`\\{-\\~");
+        str.append (L"\\\t\\ -\\/\\:-\\@\\[-\\^\\`\\{-\\~");
     else if (esc && 's' == c)
         str.append (L"\\ \\\t\\\n\\\r");
     else if (esc && 'S' == c)
