@@ -762,7 +762,7 @@ test_substitute (test::simple& ts)
     int r13 = editor.edit (s13);
     ts.ok (r13 == 's', L"edit s/a*/A/gp");
     ts.ok (buffer.dot () == 6, L".== 6 s/a*/A/gp");
-    ts.ok (out.str () == L"AxAAyA\n", L"output s/a*/A/gp");
+    ts.ok (out.str () == L"AxAyA\n", L"output s/a*/A/gp");
 
     buffer.append (buffer.dollar (), L"xaaaaaay\n");
     std::wstring cmd14 (L"s/a*/A/gp\n");
@@ -771,7 +771,7 @@ test_substitute (test::simple& ts)
     int r14 = editor.edit (s14);
     ts.ok (r14 == 's', L"edit s/a*/A/gp");
     ts.ok (buffer.dot () == 7, L".== 7 s/a*/A/gp");
-    ts.ok (out.str () == L"AxAAyA\n", L"output s/a*/A/gp");
+    ts.ok (out.str () == L"AxAyA\n", L"output s/a*/A/gp");
 }
 
 void
@@ -996,7 +996,7 @@ test_f (test::simple& ts)
 int
 main ()
 {
-    test::simple ts;
+    test::simple ts (321);
 
     test_a (ts);
     test_c (ts);

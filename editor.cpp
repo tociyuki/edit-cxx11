@@ -466,25 +466,29 @@ editor_type::substitute (std::wstring const& pattern,
     int hasnewline = (bos < eos && '\n' == eos[-1]);
     if (hasnewline)
         --eos;
-    std::wstring::const_iterator s3 = s;
-    for (; s3 <= eos; ++s3) {
-        if (re.execute (s3, bos, eos, cap)) {
+    /* see edit subst of Kernighan & Plauger, ``Software Tools'' (1976) */ 
+    std::wstring::const_iterator lastm = bos - 1;
+    while (s <= eos) {
+        std::wstring::const_iterator m = bos - 1;
+        if (re.execute (s, bos, eos, cap))
+            m = bos + cap[1];
+        if (bos <= m && lastm != m) {
             substhere (bos, replacement, cap, doc);
-            std::wstring::const_iterator s2 = s3;
-            s3 = bos + cap[1];
-            if (! gflag)
+            lastm = m;
+            if (! gflag) {
+                if (m < eos)
+                    doc.append (m, eos);
                 break;
-            if (s2 < s3)
-                --s3;
-            else if (s2 < eos)
-                doc.push_back (*s2);
+            }
         }
-        else if (s3 < eos) {
-            doc.push_back (*s3);
+        if (bos <= m && m != s)
+            s = m;
+        else {
+            if (s < eos)
+                doc.push_back (*s);
+            ++s;
         }
     }
-    if (s3 < eos)
-        doc.append (s3, eos);
     if (hasnewline)
         doc.push_back ('\n');
 }
