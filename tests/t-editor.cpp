@@ -635,6 +635,14 @@ test_find (test::simple& ts)
     ts.ok (r3 == '=', L"edit /^$/=p");
     ts.ok (buffer.dot () == 4, L".== 4 /^$/=p");
     ts.ok (out.str () == L"4\n\n", L"output /^$/=p");
+
+    std::wstring cmd4 (L"0+/foo/;+3p\n");
+    std::wstring::const_iterator s4 = cmd4.cbegin ();
+    out.str (L"");
+    int r4 = editor.edit (s4);
+    ts.ok (r4 == 'p', L"edit 0+/foo/;+3p");
+    ts.ok (buffer.dot () == 4, L".== 4 0+/foo/;+3p");
+    ts.ok (out.str () == L"foo 1\n  foo 2\n \n\n", L"output 0+/foo/;+3p");
 }
 
 void
@@ -996,7 +1004,7 @@ test_f (test::simple& ts)
 int
 main ()
 {
-    test::simple ts (321);
+    test::simple ts (324);
 
     test_a (ts);
     test_c (ts);
