@@ -746,6 +746,32 @@ test_substitute (test::simple& ts)
     ts.ok (buffer.dot () == 4, L".== 4 s/a+b/($&)/gp");
     ts.ok (out.str () == L"# dis(ab)le-bodied (aaaab) inactive.\n", L"output s/a+b/($&)/gp");
 
+    buffer.append (buffer.dollar (), L"xy\n");
+    std::wstring cmd12 (L"s/a*/A/gp\n");
+    std::wstring::const_iterator s12 = cmd12.cbegin ();
+    out.str (L"");
+    int r12 = editor.edit (s12);
+    ts.ok (r12 == 's', L"edit s/a*/A/gp");
+    ts.ok (buffer.dot () == 5, L".== 5 s/a*/A/gp");
+    ts.ok (out.str () == L"AxAyA\n", L"output s/a*/A/gp");
+
+    buffer.append (buffer.dollar (), L"xay\n");
+    std::wstring cmd13 (L"s/a*/A/gp\n");
+    std::wstring::const_iterator s13 = cmd13.cbegin ();
+    out.str (L"");
+    int r13 = editor.edit (s13);
+    ts.ok (r13 == 's', L"edit s/a*/A/gp");
+    ts.ok (buffer.dot () == 6, L".== 6 s/a*/A/gp");
+    ts.ok (out.str () == L"AxAAyA\n", L"output s/a*/A/gp");
+
+    buffer.append (buffer.dollar (), L"xaaaaaay\n");
+    std::wstring cmd14 (L"s/a*/A/gp\n");
+    std::wstring::const_iterator s14 = cmd14.cbegin ();
+    out.str (L"");
+    int r14 = editor.edit (s14);
+    ts.ok (r14 == 's', L"edit s/a*/A/gp");
+    ts.ok (buffer.dot () == 7, L".== 7 s/a*/A/gp");
+    ts.ok (out.str () == L"AxAAyA\n", L"output s/a*/A/gp");
 }
 
 void
@@ -970,7 +996,7 @@ test_f (test::simple& ts)
 int
 main ()
 {
-    test::simple ts (312);
+    test::simple ts;
 
     test_a (ts);
     test_c (ts);
