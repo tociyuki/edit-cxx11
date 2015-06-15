@@ -159,7 +159,7 @@ editor_type::cmd_e (command_type& ct)
     else {
         buffer.erase (1, buffer.dollar ());
         if (! buffer.file ().empty ()) {
-            wcoutput << L"cannot read file '" << buffer.file () << "'\n";
+            std::wcerr << L"cannot read file '" << buffer.file () << L"'\n";
             return '?';
         }
     }
@@ -307,7 +307,7 @@ editor_type::cmd_t (command_type& ct)
 int
 editor_type::cmd_w (command_type& ct)
 {
-    if (buffer.file ().empty () && ! ct.param.empty ())
+    if (buffer.file ().empty ())
         buffer.setfile (ct.param);
     if (ct.param.empty ())
         ct.param = buffer.file ();
@@ -466,7 +466,10 @@ editor_type::substitute (std::wstring const& pattern,
     int hasnewline = (bos < eos && '\n' == eos[-1]);
     if (hasnewline)
         --eos;
-    /* see edit subst of Kernighan & Plauger, ``Software Tools'' (1976) */ 
+    /* lastm is used to avoid twice zero-width matchings such as
+     *    s{a*}{A}g for "xay" => "()x(a)()y()"
+     * see edit subst of Kernighan & Plauger, ``Software Tools'' (1976)
+     */ 
     std::wstring::const_iterator lastm = bos - 1;
     for (; s <= eos; ++s) {
         std::wstring::const_iterator m = bos - 1;

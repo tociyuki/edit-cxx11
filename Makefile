@@ -22,6 +22,9 @@ regexp.o : edit.hpp regexp.cpp
 clean :
 	rm -f *.o edit tests/t-buffer tests/t-grammar tests/t-regexp tests/t-editor
 
+prove : tests/t-buffer tests/t-grammar tests/t-regexp tests/t-editor
+	prove ./tests/t-buffer ./tests/t-grammar ./tests/t-regexp ./tests/t-editor
+
 test : tests/t-buffer tests/t-grammar tests/t-regexp tests/t-editor
 	./tests/t-buffer
 	./tests/t-grammar

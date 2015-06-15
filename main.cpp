@@ -22,7 +22,7 @@ main (int argc, char* argv[])
         editor.edit (s);
     }
     else if (argc != 1) {
-        std::wcout << L"usage: " << progname << L" [file]" << std::endl;
+        std::wcerr << L"usage: " << progname << L" [file]" << std::endl;
         return EXIT_FAILURE;
     }
     std::wstring input;
@@ -34,7 +34,7 @@ main (int argc, char* argv[])
         if ('q' == cmd)
             break;
         else if ('?' == cmd)
-            std::wcout << L"?\n";
+            std::wcerr << L"?\n";
     }
     return EXIT_SUCCESS;
 }
