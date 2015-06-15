@@ -638,6 +638,46 @@ test_find (test::simple& ts)
 }
 
 void
+test_substitute (test::simple& ts)
+{
+    std::wistringstream in;
+    std::wostringstream out;
+    grammar_type scanner;
+    buffer_type buffer;
+    buffer_test_type text (ts, buffer);
+    editor_type editor (in, out, scanner, buffer);
+    buffer.append (buffer.dot (),
+        L"brown quick fox\njumps over\ndog\n");
+
+    std::wstring cmd1 (L"1s/(\\w+) (\\w+)/$2 $1/p\n");
+    std::wstring::const_iterator s1 = cmd1.cbegin ();
+    out.str (L"");
+    int r1 = editor.edit (s1);
+    ts.ok (r1 == 's', L"edit 1s/(\\w+) (\\w+)/$2 $1/p");
+    ts.ok (buffer.dot () == 1, L".== 1 1s/(\\w+) (\\w+)/$2 $1/p");
+    ts.ok (out.str () == L"quick brown fox\n", L"output 1s/(\\w+) (\\w+)/$2 $1/p");
+    text.is (1, L"quick brown fox\n");
+
+    std::wstring cmd2 (L"3s/dog/the lazy $&/p\n");
+    std::wstring::const_iterator s2 = cmd2.cbegin ();
+    out.str (L"");
+    int r2 = editor.edit (s2);
+    ts.ok (r2 == 's', L"edit 3s/dog/the lazy $&/p");
+    ts.ok (buffer.dot () == 3, L".== 3 3s/dog/the lazy $&/p");
+    ts.ok (out.str () == L"the lazy dog\n", L"output 3s/dog/the lazy $&/p");
+    text.is (3, L"the lazy dog\n");
+
+    std::wstring cmd3 (L"3s/$/./gp\n");
+    std::wstring::const_iterator s3 = cmd3.cbegin ();
+    out.str (L"");
+    int r3 = editor.edit (s3);
+    ts.ok (r3 == 's', L"edit 3s/$/./gp");
+    ts.ok (buffer.dot () == 3, L".== 3 3s/$/./gp");
+    ts.ok (out.str () == L"the lazy dog.\n", L"output 3s/$/./gp");
+    text.is (3, L"the lazy dog.\n");
+}
+
+void
 test_e (test::simple& ts)
 {
     std::wistringstream in;
@@ -859,7 +899,7 @@ test_f (test::simple& ts)
 int
 main ()
 {
-    test::simple ts (275);
+    test::simple ts (287);
 
     test_a (ts);
     test_c (ts);
@@ -878,6 +918,7 @@ main ()
     test_v (ts);
 
     test_find (ts);
+    test_substitute (ts);
 
     test_e (ts);
     test_f (ts);

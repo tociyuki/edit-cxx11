@@ -470,6 +470,8 @@ editor_type::substitute (std::wstring const& pattern,
     for (; s3 <= eos; ++s3) {
         if (re.execute (s3, bos, eos, cap)) {
             substhere (s3, replacement, cap, doc);
+            if (s3 >= eos)
+                break;
             s3 = bos + cap[1];
             if (! gflag)
                 break;
