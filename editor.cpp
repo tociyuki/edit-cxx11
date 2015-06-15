@@ -468,7 +468,7 @@ editor_type::substitute (std::wstring const& pattern,
         --eos;
     /* see edit subst of Kernighan & Plauger, ``Software Tools'' (1976) */ 
     std::wstring::const_iterator lastm = bos - 1;
-    while (s <= eos) {
+    for (; s <= eos; ++s) {
         std::wstring::const_iterator m = bos - 1;
         if (re.execute (s, bos, eos, cap))
             m = bos + cap[1];
@@ -482,12 +482,9 @@ editor_type::substitute (std::wstring const& pattern,
             }
         }
         if (bos <= m && m != s)
-            s = m;
-        else {
-            if (s < eos)
-                doc.push_back (*s);
-            ++s;
-        }
+            s = m - 1;
+        else if (s < eos)
+            doc.push_back (*s);
     }
     if (hasnewline)
         doc.push_back ('\n');
