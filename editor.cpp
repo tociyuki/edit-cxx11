@@ -469,13 +469,15 @@ editor_type::substitute (std::wstring const& pattern,
     std::wstring::const_iterator s3 = s;
     for (; s3 <= eos; ++s3) {
         if (re.execute (s3, bos, eos, cap)) {
-            substhere (s3, replacement, cap, doc);
-            if (s3 >= eos)
-                break;
+            substhere (bos, replacement, cap, doc);
+            std::wstring::const_iterator s2 = s3;
             s3 = bos + cap[1];
             if (! gflag)
                 break;
-            --s3;
+            if (s2 < s3)
+                --s3;
+            else if (s2 < eos)
+                doc.push_back (*s2);
         }
         else if (s3 < eos) {
             doc.push_back (*s3);
