@@ -675,6 +675,77 @@ test_substitute (test::simple& ts)
     ts.ok (buffer.dot () == 3, L".== 3 3s/$/./gp");
     ts.ok (out.str () == L"the lazy dog.\n", L"output 3s/$/./gp");
     text.is (3, L"the lazy dog.\n");
+
+    std::wstring cmd4 (L"3s/^/:/gp\n");
+    std::wstring::const_iterator s4 = cmd4.cbegin ();
+    out.str (L"");
+    int r4 = editor.edit (s4);
+    ts.ok (r4 == 's', L"edit 3s/^/:/gp");
+    ts.ok (buffer.dot () == 3, L".== 3 3s/^/:/gp");
+    ts.ok (out.str () == L":the lazy dog.\n", L"output 3s/^/:/gp");
+    text.is (3, L":the lazy dog.\n");
+
+    buffer.change (1, buffer.dollar (), L"we have mispell and misspell.\n");
+
+    std::wstring cmd5 (L"s/mispell/misspell/gp\n");
+    std::wstring::const_iterator s5 = cmd5.cbegin ();
+    out.str (L"");
+    int r5 = editor.edit (s5);
+    ts.ok (r5 == 's', L"edit s/mispell/misspell/gp");
+    ts.ok (buffer.dot () == 1, L".== 1 s/mispell/misspell/gp");
+    ts.ok (out.str () == L"we have misspell and misspell.\n", L"output s/mispell/misspell/gp");
+
+    buffer.append (buffer.dollar (), L"it is very hot day.\n");
+    std::wstring cmd6 (L"s/very/$&, $&, $&,/gp\n");
+    std::wstring::const_iterator s6 = cmd6.cbegin ();
+    out.str (L"");
+    int r6 = editor.edit (s6);
+    ts.ok (r6 == 's', L"edit s/very/$&, $&, $&,/gp");
+    ts.ok (buffer.dot () == 2, L".== 2 s/very/$&, $&, $&,/gp");
+    ts.ok (out.str () == L"it is very, very, very, hot day.\n", L"output s/very/$&, $&, $&,/gp");
+
+    std::wstring cmd7 (L"s/very, //gp\n");
+    std::wstring::const_iterator s7 = cmd7.cbegin ();
+    out.str (L"");
+    int r7 = editor.edit (s7);
+    ts.ok (r7 == 's', L"edit s/very, //gp");
+    ts.ok (buffer.dot () == 2, L".== 2 s/very, //gp");
+    ts.ok (out.str () == L"it is hot day.\n", L"output s/very, //gp");
+
+    buffer.append (buffer.dollar (), L"extra spaces      \n");
+    std::wstring cmd8 (L"s/ *$//gp\n");
+    std::wstring::const_iterator s8 = cmd8.cbegin ();
+    out.str (L"");
+    int r8 = editor.edit (s8);
+    ts.ok (r8 == 's', L"edit s/ *$//gp");
+    ts.ok (buffer.dot () == 3, L".== 3 s/ *$//gp");
+    ts.ok (out.str () == L"extra spaces\n", L"output s/ *$//gp");
+
+    buffer.append (buffer.dollar (), L"# disable aaaab active.\n");
+    std::wstring cmd9 (L"s/active/in$&/gp\n");
+    std::wstring::const_iterator s9 = cmd9.cbegin ();
+    out.str (L"");
+    int r9 = editor.edit (s9);
+    ts.ok (r9 == 's', L"edit s/active/in$&/gp");
+    ts.ok (buffer.dot () == 4, L".== 4 s/active/in$&/gp");
+    ts.ok (out.str () == L"# disable aaaab inactive.\n", L"output s/active/in$&/gp");
+
+    std::wstring cmd10 (L"s/able/$&-bodied/gp\n");
+    std::wstring::const_iterator s10 = cmd10.cbegin ();
+    out.str (L"");
+    int r10 = editor.edit (s10);
+    ts.ok (r10 == 's', L"edit s/able/$&-bodied/gp");
+    ts.ok (buffer.dot () == 4, L".== 4 s/able/$&-bodied/gp");
+    ts.ok (out.str () == L"# disable-bodied aaaab inactive.\n", L"output s/able/$&-bodied/gp");
+
+    std::wstring cmd11 (L"s/a+b/($&)/gp\n");
+    std::wstring::const_iterator s11 = cmd11.cbegin ();
+    out.str (L"");
+    int r11 = editor.edit (s11);
+    ts.ok (r11 == 's', L"edit s/a+b/($&)/gp");
+    ts.ok (buffer.dot () == 4, L".== 4 s/a+b/($&)/gp");
+    ts.ok (out.str () == L"# dis(ab)le-bodied (aaaab) inactive.\n", L"output s/a+b/($&)/gp");
+
 }
 
 void
@@ -899,7 +970,7 @@ test_f (test::simple& ts)
 int
 main ()
 {
-    test::simple ts (287);
+    test::simple ts (312);
 
     test_a (ts);
     test_c (ts);
