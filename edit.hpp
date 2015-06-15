@@ -3,6 +3,7 @@
 
 /* edit - text line editor */
 
+#include <iostream>
 #include <string>
 #include <memory>
 #include <vector>
@@ -65,7 +66,7 @@ class regexp_type;
 
 class editor_type {
 public:
-    editor_type (grammar_type& sc, buffer_type& b);
+    editor_type (std::wistream& ci, std::wostream& co, grammar_type& sc, buffer_type& b);
     int edit (std::wstring::const_iterator s);
     static void unquote (std::wstring const& src, std::wstring& dst);
     static void chomp_bang (std::wstring::const_iterator const bos,
@@ -74,6 +75,8 @@ public:
     static std::string encode (std::wstring str, char const* lname = "");
 
 private:
+    std::wistream& wcinput;
+    std::wostream& wcoutput;
     grammar_type& scanner;
     buffer_type& buffer;
     std::size_t line1, line2, line3;

@@ -7,8 +7,8 @@
 #include <algorithm>
 #include "edit.hpp"
 
-editor_type::editor_type (grammar_type& sc, buffer_type& b)
-: scanner (sc), buffer (b), line1 (0), line2 (0), line3 (0) {}
+editor_type::editor_type (std::wistream& ci, std::wostream& co, grammar_type& sc, buffer_type& b)
+: wcinput (ci), wcoutput (co), scanner (sc), buffer (b), line1 (0), line2 (0), line3 (0) {}
 
 int
 editor_type::edit (std::wstring::const_iterator s)
@@ -159,7 +159,7 @@ editor_type::cmd_e (command_type& ct)
     else {
         buffer.erase (1, buffer.dollar ());
         if (! buffer.file ().empty ()) {
-            std::wcout << L"cannot read file '" << buffer.file () << "'\n";
+            wcoutput << L"cannot read file '" << buffer.file () << "'\n";
             return '?';
         }
     }
@@ -172,7 +172,7 @@ editor_type::cmd_f (command_type& ct)
     buffer.setfile (ct.param);
     if (buffer.file ().empty ())
         return '?';
-    std::wcout << buffer.file () << std::endl;
+    wcoutput << buffer.file () << std::endl;
     return ct.command;
 }
 
@@ -227,9 +227,9 @@ editor_type::cmd_n (command_type& ct)
     for (std::size_t line = line1; line <= line2; ++line) {
         std::wstring::const_iterator s, e;
         buffer.get (line, s, e);
-        std::wcout << std::setw (7) << line << L" ";
+        wcoutput << std::setw (7) << line << L" ";
         for (; s < e; ++s)
-            std::wcout.put (*s);
+            wcoutput.put (*s);
     }
     buffer.setdot (line2);
     return ct.command;
@@ -242,7 +242,7 @@ editor_type::cmd_p (command_type& ct)
         std::wstring::const_iterator s, e;
         buffer.get (line, s, e);
         for (; s < e; ++s)
-            std::wcout.put (*s);
+            wcoutput.put (*s);
     }
     buffer.setdot (line2);
     return ct.command;
@@ -255,7 +255,7 @@ editor_type::print_dot (command_type& ct)
         std::wstring::const_iterator s, e;
         buffer.get (buffer.dot (), s, e);
         for (; s < e; ++s)
-            std::wcout.put (*s);
+            wcoutput.put (*s);
     }
 }
 
@@ -307,7 +307,7 @@ editor_type::cmd_t (command_type& ct)
 int
 editor_type::cmd_w (command_type& ct)
 {
-    if (buffer.file ().empty ())
+    if (buffer.file ().empty () && ! ct.param.empty ())
         buffer.setfile (ct.param);
     if (ct.param.empty ())
         ct.param = buffer.file ();
@@ -319,7 +319,7 @@ editor_type::cmd_w (command_type& ct)
 int
 editor_type::cmd_equal (command_type& ct)
 {
-    std::wcout << line2 << std::endl;
+    wcoutput << line2 << std::endl;
     buffer.setdot (line2);
     return ct.command;
 }
@@ -365,7 +365,7 @@ void
 editor_type::getdoc (std::wstring& doc)
 {
     std::wstring s;
-    while (std::getline (std::wcin, s)) {
+    while (std::getline (wcinput, s)) {
         if (s == L".")
             break;
         doc += s + L"\n";

@@ -17,7 +17,7 @@ main (int argc, char* argv[])
     if (argc == 2) {
         std::wstring file = editor_type::decode (argv[1]);
         std::wstring input = L"e " + file + L"\n";
-        editor_type editor (scanner, buffer);
+        editor_type editor (std::wcin, std::wcout, scanner, buffer);
         std::wstring::const_iterator s = input.cbegin ();
         editor.edit (s);
     }
@@ -28,7 +28,7 @@ main (int argc, char* argv[])
     std::wstring input;
     while (std::getline (std::wcin, input)) {
         input.push_back ('\n');
-        editor_type editor (scanner, buffer);
+        editor_type editor (std::wcin, std::wcout, scanner, buffer);
         std::wstring::const_iterator s = input.cbegin ();
         int cmd = editor.edit (s);
         if ('q' == cmd)
