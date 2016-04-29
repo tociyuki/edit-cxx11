@@ -109,7 +109,7 @@ Replacements.
 License: The BSD 3-Clause
 =========================
 
-Copyright (c) 2015, MIZUTANI Tociyuki  
+Copyright (c) 2016, MIZUTANI Tociyuki  
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

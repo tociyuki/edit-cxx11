@@ -4,12 +4,19 @@
 #include <algorithm>
 #include "edit.hpp"
 
-/* execute () and addthread () based on Russ Cox's Pike VM */
+// execute () and addthread () based on Russ Cox's Pike VM
 
-/* recode_type op */
+// recode_type op
 enum {
-    MATCH, ANY, CCLASS, NCCLASS, WORDB, NWORDB, BOL, EOL, JMP, SPLIT, SAVE
+    MATCH, ANY, CCLASS, NCCLASS, WORDB, NWORDB, BOL, EOL, JMP, SPLIT, SAVE,
+    PRIMITIVE, GROUP, LPAREN, MANY, ALT, RPAREN    
 };
+
+void recode_type::assign (int a, int b, int c, std::wstring const& d)
+{
+    op = a; x = b; y = c;
+    s = d;
+}
 
 std::shared_ptr<std::vector<std::size_t>>
 rethread_type::update (std::size_t i, std::size_t x) const
@@ -22,8 +29,11 @@ rethread_type::update (std::size_t i, std::size_t x) const
 }
 
 regexp_type::regexp_type ()
-: group (0), re (), eor (), program (), gen (1), mark (),
-  bos (), eos () {}
+: group (0), pattern (), pos (), token (), program (), gen (1), mark (),
+  bos (), eos ()
+{
+    modifier_extend = false;
+}
 
 bool
 regexp_type::execute (std::wstring::const_iterator s,
@@ -136,13 +146,15 @@ regexp_type::atwordboundary (std::wstring::const_iterator s)
 }
 
 bool
-regexp_type::compile (std::wstring const& pattern)
+regexp_type::compile (std::wstring const& s)
 {
     group = 0;
-    re = pattern.cbegin ();
-    eor = pattern.cend ();
+    pattern = s;
+    pos = pattern.cbegin ();
     program.clear ();
-    if (! (alt (program) && re == eor))
+    if (! next_token ())
+        return false;
+    if (! (alt (program) && MATCH == token.op))
         return false;
     program.push_back ({MATCH, 0, 0, L""});
     return true;
@@ -155,8 +167,9 @@ regexp_type::alt (std::vector<recode_type>& code)
     std::vector<recode_type> lhs;
     if (! cat (lhs))
         return false;
-    while (re < eor && '|' == *re) {
-        ++re;
+    while (ALT == token.op) {
+        if (! next_token ())
+            return false;
         std::vector<recode_type> rhs;
         if (! cat (rhs))
             return false;
@@ -179,7 +192,7 @@ regexp_type::alt (std::vector<recode_type>& code)
 bool
 regexp_type::cat (std::vector<recode_type>& code)
 {
-    while (re < eor && '|' != *re && ')' != *re) {
+    while (ALT != token.op && RPAREN != token.op && MATCH != token.op) {
         std::vector<recode_type> code1;
         if (! term (code1))
             return false;
@@ -195,10 +208,11 @@ regexp_type::term (std::vector<recode_type>& code)
     if (! factor (code1))
         return false;
     int k1 = 1, k2 = 1;
-    if (re < eor && ('?' == *re || '*' == *re || '+' == *re)) {
-        k1 = '+' == *re ? 1 : 0;
-        k2 = '?' == *re ? 1 : -1;
-        ++re;
+    if (MANY == token.op) {
+        k1 = token.x;
+        k2 = token.y;
+        if (! next_token ())
+            return false;
     }
     int n1 = code1.size ();
     int x = k1 == 1 && k2 == -1 ? -(n1 + 1) : 0;
@@ -222,86 +236,209 @@ bool
 regexp_type::factor (std::vector<recode_type>& code)
 {
     std::wstring str;
-    if (re >= eor)
-        return false;
-    if ('.' == re[0] || '^' == re[0] || '$' == re[0]) {
-        int op = '^' == re[0] ? BOL : '$' == re[0] ? EOL : ANY;
-        code.push_back ({op, 0, 0, L""});
-        ++re;
-    }
-    else if ('\\' == re[0] && re + 1 < eor && ('b' == re[1] || 'B' == re[1])) {
-        int op = 'b' == re[1] ? WORDB : NWORDB;
-        code.push_back ({op, 0, 0, L""});
-        re += 2;
-    }
-    else if ('(' == re[0]) {
-        ++re;
-        ++group;
-        int n1 = group * 2, n2 = group * 2 + 1;
-        code.push_back ({SAVE, n1, 0, L""});
-        if (! (alt (code) && re < eor && ')' == re[0]))
+    if (PRIMITIVE == token.op) {
+        code.push_back ({token.x, 0, 0, L""});
+        std::swap (code.back ().s, token.s);
+        if (! next_token ())
             return false;
-        ++re;
-        code.push_back ({SAVE, n2, 0, L""});
     }
-    else if ('[' == re[0]) {
-        ++re;
-        int op = re < eor && '^' == re[0] ? NCCLASS : CCLASS;
-        if (NCCLASS == op)
-            ++re;
-        if (! clschar (str))
+    else if (LPAREN == token.op || GROUP == token.op) {
+        bool isgroup = GROUP == token.op;
+        int n1 = token.x, n2 = token.x + 1;
+        if (isgroup)
+            code.push_back ({SAVE, n1, 0, L""});
+        if (! next_token ())
             return false;
-        while (re < eor && ']' != re[0]) {
-            if ('-' == re[0] && re + 1 < eor && ']' != re[1])
-                str.push_back (*re++);
-            if ('-' == re[0] && re + 1 < eor && ']' != re[1])
-                return false;
-            if (! clschar (str))
-                return false;
-        }
-        if (! (re < eor && ']' == re[0]))
+        if (! (alt (code) && RPAREN == token.op))
             return false;
-        ++re;
-        code.push_back ({op, 0, 0, str});
+        if (! next_token ())
+            return false;
+        if (isgroup)
+            code.push_back ({SAVE, n2, 0, L""});
     }
-    else if (clschar (str))
-        code.push_back ({CCLASS, 0, 0, str});
     else
         return false;
     return true;
 }
 
-bool
-regexp_type::clschar (std::wstring& str)
+static inline bool
+isrspace (wchar_t const c)
 {
-    if (re >= eor || ! (' ' <= *re && 0x7f != *re))
-        return false;
-    int c = *re++;
-    bool esc = '\\' == c;
-    if (esc) {
-        if (re >= eor || ! (' ' <= *re && 0x7f != *re))
-            return false;
-        c = *re++;
-    }
-    if (esc && 'd' == c)
-        str.append (L"\\0-\\9");
-    else if (esc && 'D' == c)
-        str.append (L"\\\t\\ -\\/\\:-\\~");
-    else if (esc && 'w' == c)
-        str.append (L"\\0-\\9\\a-\\z\\A-\\Z\\_");
-    else if (esc && 'W' == c)
-        str.append (L"\\\t\\ -\\/\\:-\\@\\[-\\^\\`\\{-\\~");
-    else if (esc && 's' == c)
-        str.append (L"\\ \\\t\\\n\\\r");
-    else if (esc && 'S' == c)
-        str.append (L"\\!-\\~");
-    else if (esc && 't' == c)
-        str.append (L"\\\t");
-    else if (esc && 'n' == c)
-        str.append (L"\\\n");
+    return L' ' == c || L'\t' == c || L'\n' == c || L'\r' == c;
+}
+
+static inline bool
+isrprint (wchar_t const c)
+{
+    return L' ' <= c && 0x7f != c;
+}
+
+static inline std::wstring
+rangechar (wchar_t const c)
+{
+    std::wstring s;
+    s.push_back (L'\\');
+    s.push_back (c);
+    return s;
+}
+
+static inline bool
+isrdws (wchar_t const e)
+{
+    return L'd' == e || L'D' == e || L'w' == e || L'W' == e || L's' == e || L'S' == e;
+}
+
+static inline std::wstring
+rangeesc (wchar_t const e)
+{
+    std::wstring s;
+    if (L'd' == e)
+        s.append (L"\\0-\\9");
+    else if (L'D' == e)
+        s.append (L"\\\t\\ -\\/\\:-\\~");
+    else if (L'w' == e)
+        s.append (L"\\0-\\9\\a-\\z\\A-\\Z\\_");
+    else if (L'W' == e)
+        s.append (L"\\\t\\ -\\/\\:-\\@\\[-\\^\\`\\{-\\~");
+    else if (L's' == e)
+        s.append (L"\\ \\\t\\\n\\\r");
+    else if (L'S' == e)
+        s.append (L"\\!-\\~");
     else {
-        str.push_back ('\\');
-        str.push_back (c);
+        wchar_t const c = L't' == e ? L'\t' : L'r' == e ? L'\r' : L'n' == e ? L'\n' : e;
+        s.push_back (L'\\');
+        s.push_back (c);
     }
-    return true;
+    if (L'D' == e || L'w' == e || L'S' == e) {
+        s.push_back (L'\\');
+        s.push_back (0x80);
+        s.push_back (L'-');
+        s.push_back (L'\\');
+        s.push_back (0x10ffff);
+    }
+    return std::move (s);
+}
+
+bool
+regexp_type::next_token (void)
+{
+    enum {ERROR, OK, SSTART, SCOMMENT, SBSLASH, SGROUP, SLPQUES,
+        SLBRACKET, SNLBRACKET, SRANGELHS, SRANGEAFTER, SRANGERHS,
+        SRANGELHB, SRANGERHB, SCCLASSEND};
+    int next_state = SSTART;
+    for (; next_state >= SSTART && pos <= pattern.cend (); ++pos) {
+        int const state = next_state;
+        next_state = ERROR;
+        if (pos == pattern.cend ()) {
+            if (SSTART == state || SCOMMENT == state) {
+                token.assign (MATCH, 0, 0, L"");
+                return true;
+            }
+            return false;
+        }
+        wchar_t c = *pos;
+        if (SSTART == state) {
+            next_state = OK;
+            if (L'\\' == c || L'[' == c || L']' == c || L'(' == c)
+                next_state = L'\\' == c ? SBSLASH : L'[' == c ? SLBRACKET
+                    : L'(' == c ? SGROUP : ERROR;
+            else if (L'|' == c || L')' == c)
+                token.assign (L'|' == c ? ALT : RPAREN, 0, 0, L"");
+            else if (L'?' == c || L'*' == c || L'+' == c)
+                token.assign (MANY, L'+' == c ? 1 : 0, L'?' == c ? 1 : -1, L"");
+            else if (L'.' == c || L'^' == c || L'$' == c)
+                token.assign (PRIMITIVE, L'.' == c ? ANY : L'^' == c ? BOL :EOL, 0, L"");
+            else if (modifier_extend && isrspace (c))
+                next_state = SSTART;
+            else if (modifier_extend && L'#' == c)
+                next_state = SCOMMENT;
+            else if (isrprint (c))
+                token.assign (PRIMITIVE, CCLASS, 0, rangechar (c));
+            else
+                next_state = ERROR;
+        }
+        else if (SCOMMENT == state) {
+            next_state = L'\n' == c ? SSTART : SCOMMENT;
+        }
+        else if (SBSLASH == state) {
+            next_state = OK;
+            if (L'b' == c || L'B' == c)
+                token.assign (PRIMITIVE, L'b' == c ? WORDB : NWORDB, 0, L"");
+            else if (isrprint (c))
+                token.assign (PRIMITIVE, CCLASS, 0, rangeesc (c));
+            else
+                next_state = ERROR;
+        }
+        else if (SGROUP == state) {
+            if (L'?' == c)
+                next_state = SLPQUES;
+            else {
+                group += 2;
+                token.assign (GROUP, group, 0, L"");
+                --pos;
+                next_state = OK;
+            }
+        }
+        else if (SLPQUES == state) {
+            token.assign (LPAREN, 0, 0, L"");
+            next_state = L':' == c ? OK : ERROR;
+        }
+        else if (SLBRACKET == state || SNLBRACKET == state) {
+            int const op = SLBRACKET == state ? CCLASS : NCCLASS;
+            if (SLBRACKET == state && L'^' == c)
+                next_state = SNLBRACKET;
+            else if (SNLBRACKET == state && L']' == c) {
+                token.assign (PRIMITIVE, CCLASS, 0, rangechar (L'^'));
+                next_state = OK;
+            }
+            else if (L'\\' == c) {
+                token.assign (PRIMITIVE, op, 0, L"");
+                next_state = SRANGELHB;
+            }
+            else if (isrprint (c)) {
+                token.assign (PRIMITIVE, op, 0, rangechar (c));
+                next_state = SRANGELHS;
+            }
+        }
+        else if (SRANGELHS == state || SRANGERHS == state || SRANGEAFTER == state) {
+            if (L']' == c) {
+                if (SRANGERHS == state)
+                    token.s.append (rangechar (L'-'));
+                next_state = OK;
+            }
+            else if (L'\\' == c)
+                next_state = SRANGERHS == state ? SRANGERHB : SRANGELHB;
+            else if (L'-' == c)
+                next_state = SRANGELHS == state ? SRANGERHS
+                    : SRANGEAFTER == state ? SCCLASSEND : ERROR;
+            else if (isrprint (c)) {
+                if (SRANGERHS == state)
+                    token.s.push_back (L'-');
+                token.s.append (rangechar (c));
+                next_state = SRANGERHS == state ? SRANGEAFTER : SRANGELHS;
+            }
+        }
+        else if (SRANGELHB == state) {
+            if (isrprint (c)) {
+                token.s.append (rangeesc (c));
+                next_state = isrdws (c) ? SRANGEAFTER : SRANGELHS;
+            }
+        }
+        else if (SRANGERHB == state) {
+            if (! isrdws (c) && isrprint (c)) {
+                token.s.push_back (L'-');
+                token.s.append (rangeesc (c));
+                next_state = SRANGEAFTER;
+            }
+        }
+        else if (SCCLASSEND == state) {
+            if (L']' == c) {
+                token.s.append (rangechar (L'-'));
+                next_state = OK;
+            }
+        }
+    }
+    if (OK != next_state)
+        --pos;
+    return OK == next_state;
 }

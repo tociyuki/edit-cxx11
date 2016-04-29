@@ -46,7 +46,7 @@ editor_type::command (command_type& ct)
     std::wstring doc;
     if (1 == ct.naddr)
         line2 = line1;
-    if (line1 < 0 || line1 > line2 || buffer.dollar () < line1 || buffer.dollar () < line2)
+    if (line1 > line2 || buffer.dollar () < line1 || buffer.dollar () < line2)
         return '?';
     if (line1 == 0 && onemore.find (ct.command) != std::wstring::npos)
         return '?';
@@ -372,7 +372,7 @@ editor_type::getdoc (std::wstring& doc)
     }
 }
 
-bool
+int
 editor_type::evalrange (command_type const& ct)
 {
     if (! evaladdr (ct.addr1, line1))

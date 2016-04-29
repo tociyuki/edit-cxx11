@@ -1,4 +1,4 @@
-CXX=g++ -std=c++11
+CXX=clang++ -std=c++11
 CXXFLAGS=-Wall -O2
 
 edit : buffer.o editor.o grammar.o main.o regexp.o

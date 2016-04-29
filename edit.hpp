@@ -51,6 +51,7 @@ struct undo_type {
 struct recode_type {
     int op, x, y;
     std::wstring s;
+    void assign (int a, int b, int c, std::wstring const& d);
 };
 
 // regular expression Rob Pike's virtual machine thread
@@ -104,7 +105,7 @@ private:
     bool read (std::wstring const& file, std::wstring& doc);
     bool write (std::wstring const& file);
     void getdoc (std::wstring& doc);
-    bool evalrange (command_type const& ct);
+    int evalrange (command_type const& ct);
     bool evaladdr (std::vector<addr_type> const& addr, std::size_t& line);
     int find (int n, int way, std::wstring const& pattern);
     bool match (regexp_type& re,
@@ -182,25 +183,29 @@ private:
 class regexp_type {
 public:
     regexp_type ();
-    bool compile (std::wstring const& pattern);
+    bool compile (std::wstring const& str);
     bool execute (std::wstring::const_iterator s,
         std::wstring::const_iterator abos, std::wstring::const_iterator aeos,
         std::vector<std::size_t>& capture);
 
 private:
     int group;
-    std::wstring::const_iterator re;
-    std::wstring::const_iterator eor;
+    bool modifier_extend;
+    std::wstring pattern;
+    std::wstring::const_iterator pos;
+    recode_type token;
     std::vector<recode_type> program;
     int gen;
     std::vector<int> mark;
     std::wstring::const_iterator bos;
     std::wstring::const_iterator eos;
+
     bool alt (std::vector<recode_type>& code);
     bool cat (std::vector<recode_type>& code);
     bool term (std::vector<recode_type>& code);
     bool factor (std::vector<recode_type>& code);
-    bool clschar (std::wstring& str);
+    bool next_token (void);
+
     void addthread (std::vector<rethread_type>& q, rethread_type&& th,
         std::wstring::const_iterator s);
     bool atwordboundary (std::wstring::const_iterator s);
