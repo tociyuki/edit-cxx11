@@ -89,10 +89,10 @@ Regular expressions.
     [a-z]           character class
     [^a-z]          negative character class
     \d              [0-9]
-    \D              [^0-9] (7 bit ASCII only)
+    \D              [^0-9]
     \s              [ \t]
-    \S              [^ \t] (7 bit ASCII only)
-    \w              [0-9A-Za-z_]
+    \S              [^ \t]
+    \w              [0-9A-Za-z_] (and U+0080 to U+10FFFF)
     \W              [^0-9A-Za-z_] (7 bit ASCII only)
     \b              word boundary
     \B              negative word boundary
