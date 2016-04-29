@@ -81,6 +81,7 @@ Regular expressions.
     $               match end of line
     .               match any character without newline
     (re)            group
+    (?:re)          uncaptured sub-expression
     re|re|re        alternative
     re re re        sequence
     re?             zero or one
