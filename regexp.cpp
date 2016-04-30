@@ -7,9 +7,10 @@
 // execute () and addthread () based on Russ Cox's Pike VM
 
 // recode_type op
+// MUST APPEARS IN ORDER: {ANY, BOL, EOL} and {ALT, RPAREN}
 enum {
-    MATCH, ANY, CCLASS, NCCLASS, WORDB, NWORDB, BOL, EOL, JMP, SPLIT, SAVE,
-    PRIMITIVE, GROUP, LPAREN, MANY, ALT, RPAREN    
+    MATCH, ANY, BOL, EOL, CCLASS, NCCLASS, WORDB, NWORDB, JMP, SPLIT, SAVE,
+    PRIMITIVE, GROUP, LPAREN, ALT, RPAREN, MANY
 };
 
 void recode_type::assign (int a, int b, int c, std::wstring const& d)
@@ -262,12 +263,6 @@ regexp_type::factor (std::vector<recode_type>& code)
 }
 
 static inline bool
-isrspace (wchar_t const c)
-{
-    return L' ' == c || L'\t' == c || L'\n' == c || L'\r' == c;
-}
-
-static inline bool
 isrprint (wchar_t const c)
 {
     return L' ' <= c && 0x7f != c;
@@ -322,60 +317,50 @@ rangeesc (wchar_t const e)
 bool
 regexp_type::next_token (void)
 {
-    enum {ERROR, OK, SSTART, SCOMMENT, SBSLASH, SGROUP, SLPQUES,
-        SLBRACKET, SNLBRACKET, SRANGELHS, SRANGEAFTER, SRANGERHS,
-        SRANGELHB, SRANGERHB, SCCLASSEND};
+    static const std::string START_CHAR (
+      // ~~~~~~~~~tn~~r0~~~~~~~~~~~~~~~~~ !"#$%&'()*+,-./0123456789:;<=>?
+        "~~~~~~~~~BB~~B~~~~~~~~~~~~~~~~~~BAAAEAAAJGHHAACAAAAAAAAAAAAAAAAH"
+      // @ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAALI~DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFAA~");
+    enum {ERROR, OK, SSTART, SLINECOMMENT, SBACKSLASH, SGROUP, SLPQUES,
+        SLBRACKET, SNLBRACKET, SRANGELHS, SRANGELHB, SRANGERHS, SRANGERHB,
+        SRANGEAFTER, SCCLASSEND};
     int next_state = SSTART;
     for (; next_state >= SSTART && pos <= pattern.cend (); ++pos) {
         int const state = next_state;
         next_state = ERROR;
         if (pos == pattern.cend ()) {
-            if (SSTART == state || SCOMMENT == state) {
+            if (SSTART == state || SLINECOMMENT == state) {
                 token.assign (MATCH, 0, 0, L"");
                 return true;
             }
             return false;
         }
-        wchar_t c = *pos;
+        wchar_t const c = *pos;
         if (SSTART == state) {
             next_state = OK;
-            if (L'\\' == c)
-                next_state = SBSLASH;
-            else if (L'[' == c)
-                next_state = SLBRACKET;
-            else if (L']' == c)
-                next_state = ERROR;
-            else if (L'(' == c)
-                next_state = SGROUP;
-            else if (L'|' == c)
-                token.assign (ALT, 0, 0, L"");
-            else if (L')' == c)
-                token.assign (RPAREN, 0, 0, L"");
-            else if (L'?' == c)
-                token.assign (MANY, 0, 1, L"");
-            else if (L'*' == c)
-                token.assign (MANY, 0, -1, L"");
-            else if (L'+' == c)
-                token.assign (MANY, 1, -1, L"");
-            else if (L'.' == c)
-                token.assign (PRIMITIVE, ANY, 0, L"");
-            else if (L'^' == c)
-                token.assign (PRIMITIVE, BOL, 0, L"");
-            else if (L'$' == c)
-                token.assign (PRIMITIVE, EOL, 0, L"");
-            else if (modifier_extend && isrspace (c))
+            int const code = c > 0x7f ? 'A' : START_CHAR[c];
+            if (modifier_extend && 'B' == code) // 'B':[\t\r\n ]
                 next_state = SSTART;
-            else if (modifier_extend && L'#' == c)
-                next_state = SCOMMENT;
-            else if (isrprint (c))
+            else if (modifier_extend && '#' == c)
+                next_state = SLINECOMMENT;
+            else if (code < 'C') // 'A':[^$()*+.?\[\\\]^|[^:graph:]], 'B'
                 token.assign (PRIMITIVE, CCLASS, 0, rangechar (c));
+            else if (code < 'F') // 'C':'.' ANY, 'D':'^' BOL, 'E':'$' EOL
+                token.assign (PRIMITIVE, ANY + code - 'C', 0, L"");
+            else if (code < 'H') // 'F':'|' ALT, 'G':')' RPAREN
+                token.assign (ALT + code - 'F', 0, 0, L"");
+            else if ('H' == code) // 'H':[*+?] MANY
+                token.assign (MANY, L'+' == c ? 1 : 0, L'?' == c ? 1 : -1, L"");
+            else if (code < 'M')  // 'I':'\\','J':'(','K':,'L':'['
+                next_state = SBACKSLASH + code - 'I';
             else
                 next_state = ERROR;
         }
-        else if (SCOMMENT == state) {
-            next_state = L'\n' == c ? SSTART : SCOMMENT;
+        else if (SLINECOMMENT == state) {
+            next_state = L'\n' == c ? SSTART : SLINECOMMENT;
         }
-        else if (SBSLASH == state) {
+        else if (SBACKSLASH == state) {
             next_state = OK;
             if (L'b' == c || L'B' == c)
                 token.assign (PRIMITIVE, L'b' == c ? WORDB : NWORDB, 0, L"");
@@ -436,6 +421,12 @@ regexp_type::next_token (void)
                 next_state = SRANGELHS;
             }
         }
+        else if (SRANGELHB == state) {
+            if (isrprint (c)) {
+                token.s.append (rangeesc (c));
+                next_state = isrdws (c) ? SRANGEAFTER : SRANGELHS;
+            }
+        }
         else if (SRANGERHS == state) {
             if (L']' == c) {
                 token.s.append (rangechar (L'-'));
@@ -446,6 +437,13 @@ regexp_type::next_token (void)
             else if (L'-' != c && isrprint (c)) {
                 token.s.push_back (L'-');
                 token.s.append (rangechar (c));
+                next_state = SRANGEAFTER;
+            }
+        }
+        else if (SRANGERHB == state) {
+            if (! isrdws (c) && isrprint (c)) {
+                token.s.push_back (L'-');
+                token.s.append (rangeesc (c));
                 next_state = SRANGEAFTER;
             }
         }
@@ -460,19 +458,6 @@ regexp_type::next_token (void)
             else if (isrprint (c)) {
                 token.s.append (rangechar (c));
                 next_state = SRANGELHS;
-            }
-        }
-        else if (SRANGELHB == state) {
-            if (isrprint (c)) {
-                token.s.append (rangeesc (c));
-                next_state = isrdws (c) ? SRANGEAFTER : SRANGELHS;
-            }
-        }
-        else if (SRANGERHB == state) {
-            if (! isrdws (c) && isrprint (c)) {
-                token.s.push_back (L'-');
-                token.s.append (rangeesc (c));
-                next_state = SRANGEAFTER;
             }
         }
         else if (SCCLASSEND == state) {
