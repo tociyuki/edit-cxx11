@@ -339,15 +339,30 @@ regexp_type::next_token (void)
         wchar_t c = *pos;
         if (SSTART == state) {
             next_state = OK;
-            if (L'\\' == c || L'[' == c || L']' == c || L'(' == c)
-                next_state = L'\\' == c ? SBSLASH : L'[' == c ? SLBRACKET
-                    : L'(' == c ? SGROUP : ERROR;
-            else if (L'|' == c || L')' == c)
-                token.assign (L'|' == c ? ALT : RPAREN, 0, 0, L"");
-            else if (L'?' == c || L'*' == c || L'+' == c)
-                token.assign (MANY, L'+' == c ? 1 : 0, L'?' == c ? 1 : -1, L"");
-            else if (L'.' == c || L'^' == c || L'$' == c)
-                token.assign (PRIMITIVE, L'.' == c ? ANY : L'^' == c ? BOL :EOL, 0, L"");
+            if (L'\\' == c)
+                next_state = SBSLASH;
+            else if (L'[' == c)
+                next_state = SLBRACKET;
+            else if (L']' == c)
+                next_state = ERROR;
+            else if (L'(' == c)
+                next_state = SGROUP;
+            else if (L'|' == c)
+                token.assign (ALT, 0, 0, L"");
+            else if (L')' == c)
+                token.assign (RPAREN, 0, 0, L"");
+            else if (L'?' == c)
+                token.assign (MANY, 0, 1, L"");
+            else if (L'*' == c)
+                token.assign (MANY, 0, -1, L"");
+            else if (L'+' == c)
+                token.assign (MANY, 1, -1, L"");
+            else if (L'.' == c)
+                token.assign (PRIMITIVE, ANY, 0, L"");
+            else if (L'^' == c)
+                token.assign (PRIMITIVE, BOL, 0, L"");
+            else if (L'$' == c)
+                token.assign (PRIMITIVE, EOL, 0, L"");
             else if (modifier_extend && isrspace (c))
                 next_state = SSTART;
             else if (modifier_extend && L'#' == c)
@@ -383,39 +398,68 @@ regexp_type::next_token (void)
             token.assign (LPAREN, 0, 0, L"");
             next_state = L':' == c ? OK : ERROR;
         }
-        else if (SLBRACKET == state || SNLBRACKET == state) {
-            int const op = SLBRACKET == state ? CCLASS : NCCLASS;
-            if (SLBRACKET == state && L'^' == c)
+        else if (SLBRACKET == state) {
+            if (L'^' == c)
                 next_state = SNLBRACKET;
-            else if (SNLBRACKET == state && L']' == c) {
+            else if (L'\\' == c) {
+                token.assign (PRIMITIVE, CCLASS, 0, L"");
+                next_state = SRANGELHB;
+            }
+            else if (isrprint (c)) {
+                token.assign (PRIMITIVE, CCLASS, 0, rangechar (c));
+                next_state = SRANGELHS;
+            }
+        }
+        else if (SNLBRACKET == state) {
+            if (L']' == c) {
                 token.assign (PRIMITIVE, CCLASS, 0, rangechar (L'^'));
                 next_state = OK;
             }
             else if (L'\\' == c) {
-                token.assign (PRIMITIVE, op, 0, L"");
+                token.assign (PRIMITIVE, NCCLASS, 0, L"");
                 next_state = SRANGELHB;
             }
             else if (isrprint (c)) {
-                token.assign (PRIMITIVE, op, 0, rangechar (c));
+                token.assign (PRIMITIVE, NCCLASS, 0, rangechar (c));
                 next_state = SRANGELHS;
             }
         }
-        else if (SRANGELHS == state || SRANGERHS == state || SRANGEAFTER == state) {
+        else if (SRANGELHS == state) {
+            if (L']' == c)
+                next_state = OK;
+            else if (L'\\' == c)
+                next_state = SRANGELHB;
+            else if (L'-' == c)
+                next_state = SRANGERHS;
+            else if (isrprint (c)) {
+                token.s.append (rangechar (c));
+                next_state = SRANGELHS;
+            }
+        }
+        else if (SRANGERHS == state) {
             if (L']' == c) {
-                if (SRANGERHS == state)
-                    token.s.append (rangechar (L'-'));
+                token.s.append (rangechar (L'-'));
                 next_state = OK;
             }
             else if (L'\\' == c)
-                next_state = SRANGERHS == state ? SRANGERHB : SRANGELHB;
-            else if (L'-' == c)
-                next_state = SRANGELHS == state ? SRANGERHS
-                    : SRANGEAFTER == state ? SCCLASSEND : ERROR;
-            else if (isrprint (c)) {
-                if (SRANGERHS == state)
-                    token.s.push_back (L'-');
+                next_state = SRANGERHB;
+            else if (L'-' != c && isrprint (c)) {
+                token.s.push_back (L'-');
                 token.s.append (rangechar (c));
-                next_state = SRANGERHS == state ? SRANGEAFTER : SRANGELHS;
+                next_state = SRANGEAFTER;
+            }
+        }
+        else if (SRANGEAFTER == state) {
+            if (L']' == c) {
+                next_state = OK;
+            }
+            else if (L'\\' == c)
+                next_state = SRANGELHB;
+            else if (L'-' == c)
+                next_state = SCCLASSEND;
+            else if (isrprint (c)) {
+                token.s.append (rangechar (c));
+                next_state = SRANGELHS;
             }
         }
         else if (SRANGELHB == state) {
